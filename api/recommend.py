@@ -35,6 +35,7 @@ API 키는 코드에 넣지 않고, Vercel 환경 변수 GEMINI_API_KEY 에서�
 
 import json
 import os
+import traceback
 from http.server import BaseHTTPRequestHandler
 
 import requests
@@ -209,7 +210,7 @@ def recommend_course(params, api_key):
         text = call_gemini(build_prompt(params, strict=strict), api_key)
         try:
             return validate_course(json.loads(text))
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError, TypeError):
             continue
     raise ApiError(502, "AI 응답 형식이 올바르지 않아요. 다시 시도해주세요.")
 
@@ -230,9 +231,13 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            api_key = os.environ.get("GEMINI_API_KEY")
+            # 복사·붙여넣기 때 섞여 들어온 앞뒤 공백/줄바꿈은 제거한다.
+            api_key = (os.environ.get("GEMINI_API_KEY") or "").strip()
             if not api_key:
                 raise ApiError(500, "서버에 AI API 키가 설정되지 않았어요. 관리자에게 알려주세요.")
+            if not api_key.isascii() or " " in api_key:
+                # 한글이나 눈에 안 보이는 특수문자가 섞이면 HTTP 헤더로 보낼 수 없다.
+                raise ApiError(500, "서버에 저장된 AI API 키에 한글·공백·보이지 않는 문자가 섞여 있어요. Vercel 환경 변수 값을 다시 입력해주세요.")
 
             length = int(self.headers.get("Content-Length") or 0)
             if length <= 0 or length > 10_000:
@@ -247,6 +252,11 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(200, {"ok": True, "course": course})
         except ApiError as e:
             self._send_json(e.status, {"ok": False, "error": e.message})
-        except Exception:
-            # 예상 못한 오류도 사용자에게는 친절한 문구로만 안내한다(내부 정보 노출 방지).
-            self._send_json(500, {"ok": False, "error": "알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요."})
+        except Exception as e:
+            # 자세한 내용은 Vercel 로그(Logs 탭)에만 남기고,
+            # 사용자에게는 오류 종류 이름만 보여준다(키 같은 내부 정보 노출 방지).
+            traceback.print_exc()
+            self._send_json(500, {
+                "ok": False,
+                "error": f"알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요. (오류 종류: {type(e).__name__})",
+            })
