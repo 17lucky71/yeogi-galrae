@@ -17,7 +17,7 @@
 ③ main.js: fetch('/api/recommend', { method: 'POST', body: JSON })
 ④ Vercel: /api/recommend 요청을 api/recommend.py 의 handler 로 전달
 ⑤ recommend.py: 입력 재검증 → Gemini API 호출(POST) → 응답 JSON 구조 검증
-⑥ recommend.py: {"ok": true, "course": {...}} 또는 {"ok": false, "error": "..."} 반환
+⑥ recommend.py: {"ok": true, "requestId": "...", "course": {...}} 또는 {"ok": false, "requestId": "...", "error": "..."} 반환
 ⑦ main.js: 성공이면 타임라인으로 그리고, 실패면 오류 안내 + 다시 시도 버튼 표시
 ```
 
@@ -62,6 +62,8 @@
 ```json
 {
   "ok": true,
+  "requestId": "a1b2c3d4",
+  "cached": false,
   "course": {
     "title": "강릉 바다 따라 1박 2일",
     "summary": "친구와 함께 바다와 맛집을 즐기는 코스",
@@ -76,8 +78,11 @@
 
 실패:
 ```json
-{ "ok": false, "error": "여행 지역을 입력해주세요." }
+{ "ok": false, "requestId": "f6b7fb69", "error": "여행 지역을 입력해주세요." }
 ```
+
+- `requestId`: 요청마다 붙는 8자리 ID. 오류 안내 문구 끝에 "(요청 ID: …)"로 표시되고, Vercel 로그에도 같은 ID로 남아서 문제를 바로 찾을 수 있습니다.
+- `cached`: 같은 조건의 최근 결과를 재사용했으면 `true` (응답 지연 개선, [05번 문서](05_성능_확장_및_운영_계획.md) 참고).
 
 | 상태 코드 | 의미 |
 |---|---|
@@ -88,13 +93,63 @@
 | 502 | AI 서버 오류 / AI 응답 형식 오류 |
 | 504 | AI 응답 지연 (모델당 20초 초과) |
 
+### 응답 JSON Schema (v1)
+
+화면(`main.js`)과 서버(`validate_course()`)가 같은 규칙을 따르도록 응답 구조를 정의했습니다. 구조를 바꿀 때는 버전을 올리고 이 표를 먼저 수정합니다.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RecommendResponse v1",
+  "type": "object",
+  "required": ["ok", "requestId"],
+  "properties": {
+    "ok": { "type": "boolean" },
+    "requestId": { "type": "string" },
+    "cached": { "type": "boolean" },
+    "error": { "type": "string" },
+    "course": {
+      "type": "object",
+      "required": ["title", "summary", "days"],
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "days": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "required": ["items"],
+            "properties": {
+              "day": { "type": "integer" },
+              "theme": { "type": "string" },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "time": { "type": "string" },
+                    "place": { "type": "string" },
+                    "description": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tips": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
+```
+
 ## 6. AI 응답 품질을 지키는 장치
 
 1. **JSON 응답 강제**: Gemini 호출 시 `responseMimeType: "application/json"`을 지정해 화면에 바로 그릴 수 있는 구조로 받습니다.
 2. **구조 검증**: `title`, `summary`, `days[].items` 등이 올바른 타입인지 `validate_course()`에서 검사합니다.
 3. **1회 재시도**: 형식이 깨지면 더 짧고 엄격한 프롬프트로 딱 한 번만 다시 요청합니다(무한 재시도 방지).
 4. **모델 자동 전환**: 무료 할당량은 모델별로 따로 계산되므로, 429가 나면 `GEMINI_MODELS` 목록의 다음 모델로 넘어갑니다.
-5. **안전한 출력**: AI가 준 텍스트는 `textContent`로만 화면에 넣어, 혹시 HTML/스크립트가 섞여 와도 실행되지 않습니다.
+5. **결과 캐시**: 같은 조건 요청은 1시간 동안 최근 결과를 재사용해 AI를 다시 부르지 않습니다.
+6. **안전한 출력**: AI가 준 텍스트는 `textContent`로만 화면에 넣어, 혹시 HTML/스크립트가 섞여 와도 실행되지 않습니다.
 
 ## 7. 반응형 기준
 

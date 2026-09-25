@@ -3,7 +3,19 @@
 본 저장소는 **AI 코딩 도구를 활용해 직접 기획·개발·배포한 AI 국내 여행 코스 추천 웹 서비스**를 정리한 공간입니다.
 여행 지역, 기간, 동행, 좋아하는 여행 스타일만 고르면 **Google Gemini AI가 시간대별 여행 코스를 1분 안에** 만들어 줍니다. 각 링크를 클릭하면 해당 문서 및 결과물로 바로 이동합니다.
 
-> 🌐 **서비스 바로가기: https://yeogi-galrae.vercel.app**
+> 🌐 **서비스 바로가기(배포 URL): https://yeogi-galrae.vercel.app**
+>
+> 💻 **GitHub 저장소: https://github.com/17lucky71/yeogi-galrae**
+>
+> 🕑 **커밋 이력: https://github.com/17lucky71/yeogi-galrae/commits/main**
+
+| 제출 패키지 | 바로가기 |
+|---|---|
+| ① 배포된 웹 서비스 | https://yeogi-galrae.vercel.app |
+| ② GitHub 저장소 | https://github.com/17lucky71/yeogi-galrae |
+| ③ README | 현재 문서 |
+| ④ 서비스 기획서 | [docs/01_서비스_기획서.md](docs/01_서비스_기획서.md) |
+| ⑤ 증빙 자료 | [스크린샷](docs/screenshots/) · [AI 코딩 도구 사용 기록](docs/04_AI_코딩_도구_사용_기록.md) |
 
 ---
 
@@ -26,6 +38,7 @@
 * [02_기술_설계_및_API_명세.md](docs/02_기술_설계_및_API_명세.md): HTML/CSS/JS 역할, 프론트→백엔드 호출 흐름, `/api/recommend` 요청·응답 명세
 * [03_배포_보안_및_트러블슈팅.md](docs/03_배포_보안_및_트러블슈팅.md): Vercel 배포 과정, 로컬 vs 배포 환경 차이, API 키 보안, 오류 해결 기록
 * [04_AI_코딩_도구_사용_기록.md](docs/04_AI_코딩_도구_사용_기록.md): AI 코딩 도구(Claude)와 대화하며 기획·구현·오류 수정한 과정
+* [05_성능_확장_및_운영_계획.md](docs/05_성능_확장_및_운영_계획.md): 응답 지연 개선(캐시·경량 모델·출력 제한), 확장 계획(비동기·큐·요청 제한), 비용·키 교체 운영, 프레임워크 전환 영향
 
 ### 3. 💻 소스 코드
 
@@ -113,6 +126,7 @@ yeogi-galrae/
 │   ├── 02_기술_설계_및_API_명세.md
 │   ├── 03_배포_보안_및_트러블슈팅.md
 │   ├── 04_AI_코딩_도구_사용_기록.md
+│   ├── 05_성능_확장_및_운영_계획.md
 │   └── screenshots/
 ├── requirements.txt
 ├── vercel.json

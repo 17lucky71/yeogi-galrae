@@ -147,7 +147,9 @@ async function requestCourse(payload) {
     try { data = await res.json(); } catch (e) { /* JSON이 아닌 응답(예: 배포 오류 페이지) */ }
 
     if (!res.ok || !data || !data.ok) {
-      throw new Error(messageForStatus(res.status, data && data.error));
+      const base = messageForStatus(res.status, data && data.error);
+      // 요청 ID를 함께 보여주면, 문제가 생겼을 때 서버 로그에서 바로 찾을 수 있다.
+      throw new Error(data && data.requestId ? `${base} (요청 ID: ${data.requestId})` : base);
     }
     renderCourse(data.course, payload);
     showView("content");

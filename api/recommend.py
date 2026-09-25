@@ -14,6 +14,8 @@
 응답(JSON, 성공 200):
   {
     "ok": true,
+    "requestId": "a1b2c3d4",     # 로그 추적용 요청 ID
+    "cached": false,             # 같은 조건의 최근 결과를 재사용했는지
     "course": {
       "title": str, "summary": str,
       "days": [{"day": int, "theme": str,
@@ -23,7 +25,7 @@
   }
 
 응답(JSON, 실패):
-  {"ok": false, "error": "사용자에게 보여줄 안내 문구"}
+  {"ok": false, "error": "사용자에게 보여줄 안내 문구", "requestId": "a1b2c3d4"}
   - 400: 필수값 누락/형식 오류
   - 429: AI API 사용량(쿼터) 초과
   - 500: 서버 설정 오류(API 키 없음)
@@ -35,7 +37,9 @@ API 키는 코드에 넣지 않고, Vercel 환경 변수 GEMINI_API_KEY 에서�
 
 import json
 import os
+import time
 import traceback
+import uuid
 from http.server import BaseHTTPRequestHandler
 
 import requests
@@ -52,6 +56,44 @@ ALLOWED_COMPANIONS = ["혼자", "친구", "연인", "가족"]
 ALLOWED_STYLES = ["맛집", "자연", "역사·문화", "카페", "액티비티", "쇼핑"]
 MAX_REGION_LENGTH = 30
 MAX_REQUEST_LENGTH = 200
+
+# [응답 지연 개선] 같은 조건 요청은 최근 결과를 재사용한다(메모리 캐시).
+# 서버리스 함수는 한동안 켜진 상태(warm)로 재사용되므로, 그 사이 같은 요청은
+# AI를 다시 부르지 않고 즉시 응답한다. (인스턴스가 꺼지면 캐시도 사라지는 가벼운 캐시)
+CACHE_TTL_SECONDS = 60 * 60   # 1시간
+CACHE_MAX_ITEMS = 100
+_course_cache = {}            # key -> (저장 시각, course)
+
+
+def cache_key(params):
+    """입력값을 정규화해서 캐시 키를 만든다. (공백·대소문자·스타일 순서 차이 무시)"""
+    normalized = {
+        "region": " ".join(params["region"].split()).lower(),
+        "duration": params["duration"],
+        "companion": params["companion"],
+        "styles": sorted(params["styles"]),
+        "request": " ".join(params["request"].split()).lower(),
+    }
+    return json.dumps(normalized, ensure_ascii=False, sort_keys=True)
+
+
+def cache_get(key):
+    entry = _course_cache.get(key)
+    if not entry:
+        return None
+    saved_at, course = entry
+    if time.time() - saved_at > CACHE_TTL_SECONDS:
+        _course_cache.pop(key, None)
+        return None
+    return course
+
+
+def cache_set(key, course):
+    if len(_course_cache) >= CACHE_MAX_ITEMS:
+        # 가장 오래된 항목부터 지운다.
+        oldest = min(_course_cache, key=lambda k: _course_cache[k][0])
+        _course_cache.pop(oldest, None)
+    _course_cache[key] = (time.time(), course)
 
 
 class ApiError(Exception):
@@ -230,6 +272,9 @@ class handler(BaseHTTPRequestHandler):
         self._send_json(405, {"ok": False, "error": "POST 방식으로 요청해주세요."})
 
     def do_POST(self):
+        # 요청마다 짧은 ID를 붙여 응답과 Vercel 로그에 함께 남긴다(문제 추적용).
+        request_id = uuid.uuid4().hex[:8]
+        started = time.time()
         try:
             # 복사·붙여넣기 때 섞여 들어온 앞뒤 공백/줄바꿈은 제거한다.
             api_key = (os.environ.get("GEMINI_API_KEY") or "").strip()
@@ -248,15 +293,24 @@ class handler(BaseHTTPRequestHandler):
                 raise ApiError(400, "요청 형식이 올바르지 않습니다.")
 
             params = validate_input(data)
-            course = recommend_course(params, api_key)
-            self._send_json(200, {"ok": True, "course": course})
+            key = cache_key(params)
+            course = cache_get(key)
+            cached = course is not None
+            if not cached:
+                course = recommend_course(params, api_key)
+                cache_set(key, course)
+            print(f"[{request_id}] 200 cached={cached} {time.time() - started:.1f}s")
+            self._send_json(200, {"ok": True, "requestId": request_id, "cached": cached, "course": course})
         except ApiError as e:
-            self._send_json(e.status, {"ok": False, "error": e.message})
+            print(f"[{request_id}] {e.status} {e.message} {time.time() - started:.1f}s")
+            self._send_json(e.status, {"ok": False, "requestId": request_id, "error": e.message})
         except Exception as e:
             # 자세한 내용은 Vercel 로그(Logs 탭)에만 남기고,
             # 사용자에게는 오류 종류 이름만 보여준다(키 같은 내부 정보 노출 방지).
+            print(f"[{request_id}] 500 unexpected error")
             traceback.print_exc()
             self._send_json(500, {
                 "ok": False,
+                "requestId": request_id,
                 "error": f"알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요. (오류 종류: {type(e).__name__})",
             })
