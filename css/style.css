@@ -246,6 +246,7 @@ input:focus, select:focus, textarea:focus {
 .result-error .btn { margin-top: 14px; }
 
 .course-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+.course-head .btn { white-space: nowrap; flex-shrink: 0; padding: 8px 16px; }
 .course-title { margin: 0; font-size: 1.35rem; }
 .course-summary { color: var(--text-muted); margin: 0 0 20px; }
 .day-block { margin-bottom: 22px; animation: fadeUp 0.35s ease both; }
