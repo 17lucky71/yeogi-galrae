@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>여기갈래? | AI 국내 여행 코스 추천</title>
+  <meta name="description" content="지역, 기간, 여행 스타일만 고르면 AI가 국내 여행 코스를 짜주는 서비스">
+  <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // 화면이 그려지기 전에 테마를 적용해서 깜빡임을 막는다.
+    (function () {
+      try {
+        var saved = localStorage.getItem("theme");
+        var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (saved === "dark" || (!saved && prefersDark)) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <!-- 상단 메뉴 -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="#home" class="logo">
+        <img src="images/favicon.svg" alt="" width="28" height="28">
+        <span>여기갈래?</span>
+      </a>
+
+      <nav class="nav" id="nav" aria-label="주요 메뉴">
+        <a href="#home" class="nav-link">홈</a>
+        <a href="#about" class="nav-link">서비스 소개</a>
+        <a href="#planner" class="nav-link">AI 코스 추천</a>
+        <a href="#faq" class="nav-link">자주 묻는 질문</a>
+      </nav>
+
+      <div class="header-actions">
+        <button type="button" class="icon-btn" id="themeToggle" aria-label="다크 모드 전환">
+          <span class="icon-sun" aria-hidden="true">☀️</span>
+          <span class="icon-moon" aria-hidden="true">🌙</span>
+        </button>
+        <button type="button" class="icon-btn menu-btn" id="menuToggle" aria-label="메뉴 열기" aria-expanded="false" aria-controls="nav">
+          <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 섹션 1: 홈 -->
+    <section id="home" class="hero">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <p class="eyebrow">AI 국내 여행 플래너</p>
+          <h1>어디 갈지, 뭐 할지<br>고민은 <span class="accent">AI</span>에게 맡기세요</h1>
+          <p class="hero-desc">
+            지역과 기간, 좋아하는 여행 스타일만 고르면<br class="br-desktop">
+            시간대별 여행 코스를 1분 안에 만들어 드려요.
+          </p>
+          <div class="hero-cta">
+            <a href="#planner" class="btn btn-primary">코스 추천받기</a>
+            <a href="#about" class="btn btn-ghost">어떻게 동작하나요?</a>
+          </div>
+        </div>
+        <div class="hero-card" aria-hidden="true">
+          <div class="mini-card">
+            <p class="mini-title">🌊 강릉 1박 2일 · 친구</p>
+            <ul>
+              <li><b>10:00</b> 안목해변 카페거리</li>
+              <li><b>12:30</b> 초당 순두부 마을</li>
+              <li><b>15:00</b> 경포호 자전거</li>
+              <li><b>18:30</b> 주문진 수산시장</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 섹션 2: 서비스 소개 -->
+    <section id="about" class="section">
+      <div class="container">
+        <h2 class="section-title">이렇게 동작해요</h2>
+        <p class="section-desc">복잡한 검색 없이 세 단계면 끝나요.</p>
+        <div class="steps">
+          <article class="step">
+            <span class="step-num">1</span>
+            <h3>조건 고르기</h3>
+            <p>가고 싶은 지역, 여행 기간, 누구와 가는지, 좋아하는 스타일을 골라요.</p>
+          </article>
+          <article class="step">
+            <span class="step-num">2</span>
+            <h3>AI가 코스 설계</h3>
+            <p>Google Gemini AI가 조건에 맞춰 시간대별 일정과 추천 이유를 만들어요.</p>
+          </article>
+          <article class="step">
+            <span class="step-num">3</span>
+            <h3>코스 확인 · 복사</h3>
+            <p>일자별 타임라인으로 코스를 확인하고, 버튼 하나로 복사해 친구에게 공유해요.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 섹션 3: AI 코스 추천 (AI 기능) -->
+    <section id="planner" class="section section-alt">
+      <div class="container planner-grid">
+        <div>
+          <h2 class="section-title">AI 코스 추천</h2>
+          <p class="section-desc">* 표시는 필수 항목이에요.</p>
+
+          <form id="plannerForm" class="planner-form" novalidate>
+            <div class="field">
+              <label for="region">여행 지역 *</label>
+              <input type="text" id="region" name="region" maxlength="30"
+                     placeholder="예: 강릉, 전주, 제주 서귀포" autocomplete="off">
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="duration">여행 기간 *</label>
+                <select id="duration" name="duration">
+                  <option value="">선택하세요</option>
+                  <option value="당일치기">당일치기</option>
+                  <option value="1박 2일">1박 2일</option>
+                  <option value="2박 3일">2박 3일</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="companion">누구와 *</label>
+                <select id="companion" name="companion">
+                  <option value="">선택하세요</option>
+                  <option value="혼자">혼자</option>
+                  <option value="친구">친구</option>
+                  <option value="연인">연인</option>
+                  <option value="가족">가족</option>
+                </select>
+              </div>
+            </div>
+
+            <fieldset class="field">
+              <legend>여행 스타일 (여러 개 선택 가능)</legend>
+              <div class="chips">
+                <label class="chip"><input type="checkbox" name="styles" value="맛집"><span>🍜 맛집</span></label>
+                <label class="chip"><input type="checkbox" name="styles" value="자연"><span>🌿 자연</span></label>
+                <label class="chip"><input type="checkbox" name="styles" value="역사·문화"><span>🏯 역사·문화</span></label>
+                <label class="chip"><input type="checkbox" name="styles" value="카페"><span>☕ 카페</span></label>
+                <label class="chip"><input type="checkbox" name="styles" value="액티비티"><span>🚴 액티비티</span></label>
+                <label class="chip"><input type="checkbox" name="styles" value="쇼핑"><span>🛍️ 쇼핑</span></label>
+              </div>
+            </fieldset>
+
+            <div class="field">
+              <label for="request">추가 요청 <span class="counter" id="requestCounter">0 / 200</span></label>
+              <textarea id="request" name="request" rows="3" maxlength="200"
+                        placeholder="예: 바다가 보이는 카페는 꼭 넣어주세요. 걷는 건 적게!"></textarea>
+            </div>
+
+            <p class="form-message" id="formMessage" role="alert" aria-live="polite"></p>
+
+            <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+              <span class="btn-label">AI에게 코스 추천받기</span>
+              <span class="spinner" aria-hidden="true"></span>
+            </button>
+          </form>
+        </div>
+
+        <!-- 결과 영역 -->
+        <div class="result-panel" id="resultPanel" aria-live="polite">
+          <div class="result-empty" id="resultEmpty">
+            <p class="result-empty-icon" aria-hidden="true">🗺️</p>
+            <p>조건을 고르고 버튼을 누르면<br>여기에 여행 코스가 나타나요.</p>
+          </div>
+          <div class="result-loading" id="resultLoading" hidden>
+            <div class="loader" aria-hidden="true"></div>
+            <p id="loadingText">AI가 코스를 짜고 있어요...</p>
+          </div>
+          <div class="result-error" id="resultError" hidden>
+            <p class="result-error-title">앗, 코스를 만들지 못했어요</p>
+            <p id="errorText"></p>
+            <button type="button" class="btn btn-ghost" id="retryBtn">다시 시도</button>
+          </div>
+          <div class="result-content" id="resultContent" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 섹션 4: FAQ -->
+    <section id="faq" class="section">
+      <div class="container narrow">
+        <h2 class="section-title">자주 묻는 질문</h2>
+        <details class="faq-item">
+          <summary>추천 코스는 얼마나 정확한가요?</summary>
+          <p>AI가 만든 추천이라 실제 영업시간이나 휴무일과 다를 수 있어요. 출발 전에 지도 앱에서 한 번 더 확인해주세요.</p>
+        </details>
+        <details class="faq-item">
+          <summary>해외 여행지도 추천되나요?</summary>
+          <p>지금은 국내 여행만 지원해요. 해외 지역을 입력하면 비슷한 분위기의 국내 여행지로 대신 추천해 드려요.</p>
+        </details>
+        <details class="faq-item">
+          <summary>"잠시 후 다시 시도해주세요"라는 메시지가 떠요.</summary>
+          <p>무료 AI 사용량을 여러 사람이 함께 쓰고 있어서, 요청이 몰리면 잠깐 막힐 수 있어요. 1~2분 뒤에 다시 눌러주세요.</p>
+        </details>
+        <details class="faq-item">
+          <summary>입력한 내용이 저장되나요?</summary>
+          <p>아니요. 입력한 조건은 코스를 만드는 데만 쓰이고 서버에 저장하지 않아요.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2026 여기갈래? · AI 웹 개발 미션 프로젝트</p>
+      <p class="footer-sub">코스 추천은 Google Gemini API로 생성됩니다.</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
